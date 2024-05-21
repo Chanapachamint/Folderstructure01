@@ -95,7 +95,12 @@ class MainUi(QMainWindow):
             QMessageBox.warning(self, "Folder Not Found", "The folder for project '{}' does not exist.".format(selected_project))
 
     def search_name(self):
-        search_name = self.mainwidget.path_lineEdit_2.text()
+        search_name = self.mainwidget.path_lineEdit_2.text().strip()
+        
+        if not search_name:
+            QMessageBox.warning(self, "No Search Input", "Please enter a name to search.")
+            return
+
         selected_project = self.mainwidget.proj_comboBox.currentText()
         project_path = os.path.join(self.root_path, selected_project)
         search_results = self.search_files_and_folders(project_path, search_name)
@@ -106,6 +111,7 @@ class MainUi(QMainWindow):
             self.display_search_results(search_results)
 
         self.mainwidget.path_lineEdit_2.clear()
+
 
     def search_files_and_folders(self, base_path, search_name):
         results = []
@@ -312,7 +318,7 @@ class MainUi(QMainWindow):
         char_folder = self.mainwidget.char_listWidget.currentItem()
         assetshot_folder_name = assetshot_folder.text()
         char_folder_name = char_folder.text()
-        new_astsht_folder_name, ok = QInputDialog.getText(self, "Create Asset/Shot Folder", "Enter the name for the new asset/shot folder:")
+        new_astsht_folder_name, ok = QInputDialog.getText(self, "Create Detail Folder", "Enter the name for the new detail folder:")
         if ok and new_astsht_folder_name:
             new_astsht_folder_path = os.path.join(self.root_path, selected_project, assetshot_folder_name, char_folder_name, new_astsht_folder_name)
             try:
@@ -369,6 +375,7 @@ class MainUi(QMainWindow):
         
         new_file_name = self.mainwidget.save_lineEdit.text().strip()
         base_name, extension = os.path.splitext(current_file_name)
+        self.mainwidget.save_lineEdit.self.clear()
         
         if not new_file_name:
             # Increment version number for existing file
