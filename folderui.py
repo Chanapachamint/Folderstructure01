@@ -10,36 +10,41 @@ import os
 import re
 import subprocess
 import shutil
+import json
+
+_NAMEPROJECT_ = "Folder Structure Projects"
+_VERSION_ = "V.0.0.1"
 
 pathDir = os.path.dirname(sys.modules[__name__].__file__)
 fileUi = '%s/folderui_widget_new.ui' % pathDir
+config_file_path = "D:/Work_Year3/Work_3/Code/folder_structure/folder_ui/_config.json"
+
 
 class MainUi(QMainWindow):
 
-    root_path = "D:/Work_Year3/Work_3/Code/folder_structure"
-
+    with open(config_file_path, 'r') as f:
+        config = json.load(f)
+        
+    root_path = config['root_path']
+    
     def __init__(self, *args, **kwargs):
         super(MainUi, self).__init__(*args, **kwargs)
-
-        fileUi = '%s/folderui_widget_new.ui' % pathDir
 
         self.mainwidget = setup_ui_maya(fileUi, self)
         self.setCentralWidget(self.mainwidget)
 
-        self.resize(800, 400)
-        self.setWindowTitle("My Work Projects")
+        self.resize(800, 500)
+        self.setWindowTitle('{} - {}'.format(_NAMEPROJECT_, _VERSION_))
         self.populate_projects_combobox()
 
         self.mainwidget.close_Button.clicked.connect(self.close)
         self.mainwidget.search_Button.clicked.connect(self.search_name)
-        self.mainwidget.reset_Button.clicked.connect(self.reset) 
+        self.mainwidget.refresh_Button.clicked.connect(self.refresh) 
         self.mainwidget.proj_comboBox.currentIndexChanged.connect(self.open_project_folder)
         self.mainwidget.proj_comboBox.currentIndexChanged.connect(self.on_project_selected)
         self.mainwidget.save_Button.clicked.connect(self.save_selected_item)
         self.mainwidget.open_Button.clicked.connect(self.open_file)
   
-
-        # Connect itemClicked signals to their respective slot methods
         self.mainwidget.assetshot_listWidget.itemClicked.connect(self.on_assetshot_selected)
         self.mainwidget.char_listWidget.itemClicked.connect(self.on_char_selected)
         self.mainwidget.astsht_listWidget.itemClicked.connect(self.on_astsht_selected)
@@ -61,21 +66,22 @@ class MainUi(QMainWindow):
     def on_project_selected(self):
         selected_project = self.mainwidget.proj_comboBox.currentText()
         if selected_project != "(None)":
+            index = self.mainwidget.proj_comboBox.findText("(None)")
+            if index != -1:
+                self.mainwidget.proj_comboBox.removeItem(index)
             self.create_asset_listWidget(selected_project)
             self.update_path_lineedit(os.path.join(self.root_path, selected_project))
+        else:
+            self.mainwidget.proj_comboBox.clear()
+            self.populate_projects_combobox()
 
     def open_project_folder(self):
         selected_project = self.mainwidget.proj_comboBox.currentText()
         if selected_project == "(None)":
-            self.mainwidget.assetshot_listWidget.clear()
-            self.mainwidget.char_listWidget.clear()
-            self.mainwidget.astsht_listWidget.clear()
-            self.mainwidget.department_listWidget.clear()
-            self.mainwidget.verpub_listWidget.clear()
-            self.mainwidget.result_listWidget.clear()
             return
         
         project_folder_path = os.path.join(self.root_path, selected_project)
+        
         if os.path.exists(project_folder_path):
             asset_folders = [folder for folder in os.listdir(project_folder_path) if os.path.isdir(os.path.join(project_folder_path, folder))]
             self.mainwidget.assetshot_listWidget.clear()
@@ -91,11 +97,6 @@ class MainUi(QMainWindow):
     def search_name(self):
         search_name = self.mainwidget.path_lineEdit_2.text()
         selected_project = self.mainwidget.proj_comboBox.currentText()
-
-        if selected_project == "(None)":
-            QMessageBox.warning(self, "No Project Selected", "Please select a project first.")
-            return
-
         project_path = os.path.join(self.root_path, selected_project)
         search_results = self.search_files_and_folders(project_path, search_name)
 
@@ -148,19 +149,20 @@ class MainUi(QMainWindow):
                     matching_folders.append(os.path.relpath(os.path.join(dirpath, dirname), root_folder))
         return matching_folders
     
-    def reset(self):
-        # Reset the project combo box to its initial value
-        self.mainwidget.proj_comboBox.setCurrentIndex(0)
-        # Clear all list widgets
-        self.mainwidget.assetshot_listWidget.clear()
-        self.mainwidget.char_listWidget.clear()
-        self.mainwidget.astsht_listWidget.clear()
-        self.mainwidget.department_listWidget.clear()
-        self.mainwidget.verpub_listWidget.clear()
-        self.mainwidget.result_listWidget.clear()
-        # Clear the path line edits
-        self.mainwidget.path_lineEdit.clear()
-        self.mainwidget.path_lineEdit_2.clear()
+    def refresh(self):
+        selected_project = self.mainwidget.proj_comboBox.currentText()
+        if selected_project:
+            self.open_project_folder()
+            if self.mainwidget.assetshot_listWidget.currentItem():
+                self.on_assetshot_selected(self.mainwidget.assetshot_listWidget.currentItem())
+            if self.mainwidget.char_listWidget.currentItem():
+                self.on_char_selected(self.mainwidget.char_listWidget.currentItem())
+            if self.mainwidget.astsht_listWidget.currentItem():
+                self.on_astsht_selected(self.mainwidget.astsht_listWidget.currentItem())
+            if self.mainwidget.department_listWidget.currentItem():
+                self.on_department_selected(self.mainwidget.department_listWidget.currentItem())
+            if self.mainwidget.verpub_listWidget.currentItem():
+                self.on_verpub_selected(self.mainwidget.verpub_listWidget.currentItem())
 
     def create_asset_listWidget(self, project_name):
         project_path = os.path.join(self.root_path, project_name)
@@ -278,15 +280,10 @@ class MainUi(QMainWindow):
                 return new_folder_path
             else:
                 QMessageBox.warning(self, "Error", "{0} folder '{1}' already exists.".format(folder_type, folder_name))
-        return None
-
+        return
 
     def create_assetshot_folder(self):
             selected_project = self.mainwidget.proj_comboBox.currentText()
-            if selected_project == "(None)":
-                QMessageBox.warning(self, "No Project Selected", "Please select a project first.")
-                return
-
             new_assetshot_folder_name, ok = QInputDialog.getText(self, "Create Asset/Shot Folder", "Enter the name for the new asset/shot folder:")
             if ok and new_assetshot_folder_name:
                 new_assetshot_folder_path = os.path.join(self.root_path, selected_project, new_assetshot_folder_name)
@@ -299,10 +296,6 @@ class MainUi(QMainWindow):
     def create_char_folder(self):
         selected_project = self.mainwidget.proj_comboBox.currentText()
         assetshot_folder = self.mainwidget.assetshot_listWidget.currentItem()
-        if selected_project == "(None)" or assetshot_folder is None:
-            QMessageBox.warning(self, "No Asset/Shot Selected", "Please select an asset/shot first.")
-            return
-
         assetshot_folder_name = assetshot_folder.text()
         new_char_folder_name, ok = QInputDialog.getText(self, "Create Character Folder", "Enter the name for the new character folder:")
         if ok and new_char_folder_name:
@@ -317,10 +310,6 @@ class MainUi(QMainWindow):
         selected_project = self.mainwidget.proj_comboBox.currentText()
         assetshot_folder = self.mainwidget.assetshot_listWidget.currentItem()
         char_folder = self.mainwidget.char_listWidget.currentItem()
-        if selected_project == "(None)" or assetshot_folder is None or char_folder is None:
-            QMessageBox.warning(self, "No Character Selected", "Please select a character first.")
-            return
-
         assetshot_folder_name = assetshot_folder.text()
         char_folder_name = char_folder.text()
         new_astsht_folder_name, ok = QInputDialog.getText(self, "Create Asset/Shot Folder", "Enter the name for the new asset/shot folder:")
@@ -337,10 +326,6 @@ class MainUi(QMainWindow):
         assetshot_folder = self.mainwidget.assetshot_listWidget.currentItem()
         char_folder = self.mainwidget.char_listWidget.currentItem()
         astsht_folder = self.mainwidget.astsht_listWidget.currentItem()
-        if selected_project == "(None)" or assetshot_folder is None or char_folder is None or astsht_folder is None:
-            QMessageBox.warning(self, "No Asset/Shot Selected", "Please select an asset/shot first.")
-            return
-
         assetshot_folder_name = assetshot_folder.text()
         char_folder_name = char_folder.text()
         astsht_folder_name = astsht_folder.text()
@@ -359,10 +344,6 @@ class MainUi(QMainWindow):
         char_folder = self.mainwidget.char_listWidget.currentItem()
         astsht_folder = self.mainwidget.astsht_listWidget.currentItem()
         department_folder = self.mainwidget.department_listWidget.currentItem()
-        if selected_project == "(None)" or assetshot_folder is None or char_folder is None or astsht_folder is None or department_folder is None:
-            QMessageBox.warning(self, "No Department Selected", "Please select a department first.")
-            return
-
         assetshot_folder_name = assetshot_folder.text()
         char_folder_name = char_folder.text()
         astsht_folder_name = astsht_folder.text()
@@ -417,7 +398,6 @@ class MainUi(QMainWindow):
             self.populate_result_list(*self.get_current_list_context())
         except Exception as e:
             QMessageBox.critical(self, "Error", "Failed to save file '{}': {}".format(new_file_name, e))
-
 
     def open_file(self):
             selected_item = self.mainwidget.result_listWidget.currentItem()
@@ -514,6 +494,7 @@ class MainUi(QMainWindow):
         else:
             self.populate_result_list(segments[0], segments[1], segments[2], segments[3], segments[4], segments[5])
 
+
 def setup_ui_maya(folderui_widget, parent):
     fileUi = os.path.dirname(folderui_widget)
     qt_loader = QtUiTools.QUiLoader()
@@ -526,6 +507,7 @@ def setup_ui_maya(folderui_widget, parent):
     f.close()
 
     return myWidget
+
 
 def run():
     global ui

@@ -51,9 +51,9 @@
       <widget class="QLineEdit" name="path_lineEdit"/>
      </item>
      <item>
-      <widget class="QPushButton" name="reset_Button">
+      <widget class="QPushButton" name="refresh_Button">
        <property name="text">
-        <string>Reset</string>
+        <string>Refresh</string>
        </property>
       </widget>
      </item>
